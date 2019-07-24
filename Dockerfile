@@ -10,13 +10,13 @@ ENV STRIP true
 RUN set -x \
 	&& apk update \
 	&& apk upgrade \
-	&& apk add --virtual build-dependencies autoconf gnutls-dev pidgin-dev libgcrypt-dev libwebp-dev automake build-base curl git json-glib-dev libtool python2
+	&& apk add --no-cache autoconf gnutls-dev pidgin-dev libgcrypt-dev libwebp-dev automake build-base curl git json-glib-dev libtool python2 \
+	&& rm -rf /var/cache/apk/*
+
 RUN cd /root \
-	&& git clone -n https://github.com/bitlbee/bitlbee \
+	&& git clone https://github.com/bitlbee/bitlbee \
 	&& cd bitlbee \
-	&& git checkout ${BITLBEE_COMMIT} \
-	&& mkdir /bitlbee-data \
-	&& ./configure --purple=1 --config=/bitlbee-data \
+	&& ./configure --purple=1 \
 	&& make \
 	&& cp bitlbee / \
 	&& make install \
@@ -26,9 +26,8 @@ RUN cd /root \
 
 FROM builder as discord-builder
 RUN cd /root \
-	&& git clone -n https://github.com/sm00th/bitlbee-discord \
+	&& git clone https://github.com/sm00th/bitlbee-discord \
 	&& cd bitlbee-discord \
-	&& git checkout ${DISCORD_COMMIT} \
 	&& ./autogen.sh \
 	&& ./configure \
 	&& make \
@@ -37,9 +36,8 @@ RUN cd /root \
 
 FROM builder as facebook-builder
 RUN cd /root \
-	&& git clone -n https://github.com/jgeboski/bitlbee-facebook \
+	&& git clone https://github.com/jgeboski/bitlbee-facebook \
 	&& cd bitlbee-facebook \
-	&& git checkout ${FACEBOOK_COMMIT} \
 	&& ./autogen.sh \
 	&& make \
 	&& make install \
@@ -47,9 +45,8 @@ RUN cd /root \
 
 FROM builder as slack-builder
 RUN cd /root \
-	&& git clone -n https://github.com/dylex/slack-libpurple \
+	&& git clone https://github.com/dylex/slack-libpurple \
 	&& cd slack-libpurple \
-	&& git checkout ${SLACK_COMMIT} \
 	&& make \
 	&& mkdir -p /usr/share/pixmaps/pidgin/protocols/16/ \
 	&& mkdir -p /usr/share/pixmaps/pidgin/protocols/22/ \
@@ -59,16 +56,24 @@ RUN cd /root \
 
 FROM alpine:latest
 
-RUN apk update
-RUN apk upgrade
-RUN apk add glib gnutls json-glib libgcrypt libpurple libpurple-bonjour libpurple-oscar libpurple-xmpp libwebp pidgin \
-	&& adduser -u 1000 -S bitlbee \
-	&& addgroup -g 1000 -S bitlbee \
-	&& mkdir /bitlbee-data \
-	&& chown -R bitlbee:bitlbee /bitlbee-data \
+RUN apk update \
+	&& apk upgrade \
+	&& apk add --no-cache glib gnutls json-glib libgcrypt libpurple libpurple-bonjour libpurple-oscar libpurple-xmpp libwebp pidgin \
+	&& apk add --no-cache znc znc-modperl znc-modpython znc-modtcl znc-extra \
+	&& rm -rf /var/cache/apk/* \
+	&& adduser -u 1000 -S irc \
+	&& addgroup -g 1000 -S irc \
+	&& mkdir -p /var/run/znc/znc/ \
+	&& touch /var/run/znc/znc/pid \
 	&& touch /var/run/bitlbee.pid \
-	&& chown bitlbee:bitlbee /var/run/bitlbee.pid
+	&& chown irc:irc /var/run/znc/znc/pid \
+	&& chown irc:irc /var/run/bitlbee.pid \
+	&& mkdir -p /var/lib/bitlbee \
+	&& mkdir -p /var/lib/znc \
+	&& chown -R irc:irc /var/lib/bitlbee \
+	&& chown -R irc:irc /var/lib/znc
 
+COPY entry.sh /entry.sh
 COPY --from=builder /usr/local/etc/bitlbee/ /usr/local/etc/bitlbee/
 COPY --from=builder /usr/local/include/bitlbee/ /usr/local/include/bitlbee/
 COPY --from=builder /usr/local/lib/pkgconfig/bitlbee.pc /usr/local/lib/pkgconfig/bitlbee.pc
@@ -85,6 +90,5 @@ COPY --from=slack-builder /usr/lib/purple-2/libslack.so /usr/lib/purple-2/libsla
 # COPY --from=slack-builder /usr/share/pixmaps/pidgin/protocols/22/slack.png /usr/share/pixmaps/pidgin/protocols/22/slack.png
 # COPY --from=slack-builder /usr/share/pixmaps/pidgin/protocols/48/slack.png /usr/share/pixmaps/pidgin/protocols/48/slack.png
 
-USER bitlbee
-VOLUME /bitlbee-data
-ENTRYPOINT ["/usr/local/sbin/bitlbee", "-F", "-n", "-d", "/bitlbee-data"]
+USER irc
+ENTRYPOINT ["/bin/sh", "/entry.sh"]
