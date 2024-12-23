@@ -1,6 +1,6 @@
 FROM alpine:3.10 as builder
 
-ENV BITLBEE_COMMIT 0b1448f
+ENV BITLBEE_COMMIT 10b36836f5da09c4114a71bf6e9f7e837a2f87b2
 ENV DISCORD_COMMIT ba47eed
 ENV FACEBOOK_COMMIT 553593d
 ENV SLACK_COMMIT 39c7b5b
@@ -14,8 +14,9 @@ RUN set -x \
 	&& rm -rf /var/cache/apk/*
 
 RUN cd /root \
-	&& git clone https://github.com/bitlbee/bitlbee \
+	&& git clone -n https://github.com/bitlbee/bitlbee \
 	&& cd bitlbee \
+	&& git checkout ${BITLBEE_COMMIT} \
 	&& ./configure --purple=1 \
 	&& make \
 	&& cp bitlbee / \
