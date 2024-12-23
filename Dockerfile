@@ -1,4 +1,4 @@
-FROM alpine:latest as builder
+FROM alpine:3.10 as builder
 
 ENV BITLBEE_COMMIT 0b1448f
 ENV DISCORD_COMMIT ba47eed
