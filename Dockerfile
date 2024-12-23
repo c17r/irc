@@ -54,7 +54,7 @@ RUN cd /root \
 	&& make install \
 	&& if [ "$STRIP" == "true" ]; then strip /usr/lib/purple-2/libslack.so; fi
 
-FROM alpine:latest
+FROM alpine:3.10
 
 RUN apk update \
 	&& apk upgrade \
